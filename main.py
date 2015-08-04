@@ -32,17 +32,35 @@ def getParser():
 def main(conn=None):
     parser = getParser()
     options = parser.parse_args()
-    
+
     conn = libvirt.open(options.connect)
     if conn is None:
         print "There is some error opening connection to libvirt"
         sys.exit(1);
 
+    # check if existing machine of same name exists
+    vm = None
+    try:
+        vm = conn.lookupByName(options.name)
+    except libvirt.libvirtError:
+        pass
+
+    if vm is not None:
+        print "VM of same name exists already, destroying and recreating it again"
+        if vm.ID() != -1:
+            vm.destroy()
+        vm.undefine()
+
     guest = Guest(conn, options)
-    guest.guestGetXML()
-    
+    xml = guest.guestGetXML(options.boot, options.cdrom).replace('\n','')
+    dom = conn.createXML(xml, 0)
+    dom = conn.defineXML(xml)
+
+    if not dom:
+        print "Cannot create/define domain"
+        sys.exit(1)
+
     return 0
 
 if __name__ == "__main__":
     main()
-

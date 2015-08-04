@@ -6,9 +6,6 @@ class OSXML():
             self.arch = 'x86_64'
         self.arch = arch
 
-    def is_x86(self):
-        return self.arch == "x86_64" or self.arch == "i686"
-            
     def getXML(self):
         os = Element('os')
 

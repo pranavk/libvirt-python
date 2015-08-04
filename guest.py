@@ -18,10 +18,10 @@ class Guest():
 
         self.os = OSXML(self.conn, arch=self.options.cpuarch)
 
-    def guestGetXML(self):
+    def guestGetXML(self, boot, cdrom):
         # Generate the XML out of class variables
         opt = self.options
-        domain = Element('domain', attrib={'key':'kvm'})
+        domain = Element('domain', attrib={'type':'kvm'})
 
         name = Element('name')
         name.text = opt.name
@@ -40,92 +40,95 @@ class Guest():
 
         domain_os = self.os.getXML()
 
-        devices = self.devices()
+        vcpu = Element('vcpu', attrib={'placement': 'static'})
+        vcpu.text = self.options.vcpu
+
+        devices = self.devices(boot, cdrom)
 
         domain.append(name)
         domain.append(uuid)
         domain.append(description)
         domain.append(memory)
         domain.append(currentMemory)
+        domain.append(vcpu)
         domain.append(domain_os)
         domain.append(devices)
 
-        pprint.pprint(ET.tostring(domain))
+        return (ET.tostring(domain))
 
-    def devices(self):
+    def devices(self, boot, cdrom):
         text = """
         <devices>
         <emulator>/usr/bin/qemu-kvm</emulator>
-        <disk type='file' device='disk'>
-        <driver name='qemu' type='raw'/>
-        <source file='/home/pranavk/disk2.img'/>
-        <target dev='hda' bus='ide'/>
-        <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+        <disk device="disk" type="file">
+        <driver name="qemu" type="raw" />
+        <source file="%s" />
+        <target bus="ide" dev="hda" />
+        <address bus="0" controller="0" target="0" type="drive" unit="0" />
         </disk>
-        <disk type='block' device='cdrom'>
-        <driver name='qemu' type='raw'/>
-        <target dev='hdb' bus='ide'/>
-        <readonly/>
-        <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+        <disk device="cdrom" type="file">
+        <driver name="qemu" type="raw" />
+        <source file="%s" />
+        <target bus="ide" dev="hdb" />
+        <readonly />
+        <address bus="0" controller="0" target="0" type="drive" unit="1" />
         </disk>
-        <controller type='usb' index='0' model='ich9-ehci1'>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x7'/>
+        <controller index="0" model="ich9-ehci1" type="usb">
+        <address bus="0x00" domain="0x0000" function="0x7" slot="0x06" type="pci" />
         </controller>
-        <controller type='usb' index='0' model='ich9-uhci1'>
-        <master startport='0'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0' multifunction='on'/>
+        <controller index="0" model="ich9-uhci1" type="usb">
+        <master startport="0" />
+        <address bus="0x00" domain="0x0000" function="0x0" multifunction="on" slot="0x06" type="pci" />
         </controller>
-        <controller type='usb' index='0' model='ich9-uhci2'>
-        <master startport='2'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x1'/>
+        <controller index="0" model="ich9-uhci2" type="usb">
+        <master startport="2" />
+        <address bus="0x00" domain="0x0000" function="0x1" slot="0x06" type="pci" />
         </controller>
-        <controller type='usb' index='0' model='ich9-uhci3'>
-        <master startport='4'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x2'/>
+        <controller index="0" model="ich9-uhci3" type="usb">
+        <master startport="4" />
+        <address bus="0x00" domain="0x0000" function="0x2" slot="0x06" type="pci" />
         </controller>
-        <controller type='pci' index='0' model='pci-root'/>
-        <controller type='ide' index='0'>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x1'/>
+        <controller index="0" model="pci-root" type="pci" />
+        <controller index="0" type="ide">
+        <address bus="0x00" domain="0x0000" function="0x1" slot="0x01" type="pci" />
         </controller>
-        <controller type='virtio-serial' index='0'>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+        <controller index="0" type="virtio-serial">
+        <address bus="0x00" domain="0x0000" function="0x0" slot="0x05" type="pci" />
         </controller>
-        <interface type='network'>
-        <mac address='52:54:00:e1:fb:d5'/>
-        <source network='default'/>
-        <model type='rtl8139'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+        <interface type="network">
+        <mac address="52:54:00:e1:fb:d5" />
+        <source network="default" />
+        <model type="rtl8139" />
+        <address bus="0x00" domain="0x0000" function="0x0" slot="0x03" type="pci" />
         </interface>
-        <serial type='pty'>
-        <target port='0'/>
+        <serial type="pty">
+        <target port="0" />
         </serial>
-        <console type='pty'>
-        <target type='serial' port='0'/>
+        <console type="pty">
+        <target port="0" type="serial" />
         </console>
-        <channel type='spicevmc'>
-        <target type='virtio' name='com.redhat.spice.0'/>
-        <address type='virtio-serial' controller='0' bus='0' port='1'/>
+        <channel type="spicevmc">
+        <target name="com.redhat.spice.0" type="virtio" />
+        <address bus="0" controller="0" port="1" type="virtio-serial" />
         </channel>
-        <input type='mouse' bus='ps2'/>
-        <input type='keyboard' bus='ps2'/>
-        <graphics type='spice' autoport='yes'>
-        <image compression='off'/>
+        <input bus="ps2" type="mouse" />
+        <input bus="ps2" type="keyboard" />
+        <graphics autoport="yes" type="spice">
+        <image compression="off" />
         </graphics>
-        <sound model='ich6'>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+        <sound model="ich6">
+        <address bus="0x00" domain="0x0000" function="0x0" slot="0x04" type="pci" />
         </sound>
         <video>
-        <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1'/>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+        <model heads="1" ram="65536" type="qxl" vgamem="16384" vram="65536" />
+        <address bus="0x00" domain="0x0000" function="0x0" slot="0x02" type="pci" />
         </video>
-        <redirdev bus='usb' type='spicevmc'>
-        </redirdev>
-        <redirdev bus='usb' type='spicevmc'>
-        </redirdev>
-        <memballoon model='virtio'>
-        <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+        <redirdev bus="usb" type="spicevmc"></redirdev>
+        <redirdev bus="usb" type="spicevmc"></redirdev>
+        <memballoon model="virtio">
+        <address bus="0x00" domain="0x0000" function="0x0" slot="0x07" type="pci" />
         </memballoon>
         </devices>
-        """
-        
+        """ % (boot, cdrom)
+
         return ET.XML(text)
